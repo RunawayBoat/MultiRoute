@@ -470,4 +470,14 @@
     <string name="dual_wifi_hotspot_upstream_native">Native Forwarding</string>
     <string name="dual_wifi_hotspot_upstream_hook_warning">No current upstream Hook beacon was detected. Check the LSPosed scope and restart the device to apply the update.</string>
     <string name="dual_wifi_hotspot_upstream_sec_disconnected">Secondary Wi-Fi (Disconnected)</string>
+    <string name="dual_sim_one">Mode 1</string>
+    <string name="dual_sim_two">Mode 2</string>
+    <string name="dual_sim_confirm_title">Secondary mobile network</string>
+    <string name="dual_sim_confirm_one">Mode 1 requests the secondary network and changes the system dual-data state. Roaming charges or network disruption may occur. The previous state is restored on normal shutdown.</string>
+    <string name="dual_sim_confirm_two">Mode 2 requests the secondary network without changing the dual-data property. Roaming charges and battery usage may occur.</string>
+    <string name="dual_sim_confirm_stop">Stop the secondary network request? Mode 1 attempts to restore its previous dual-data state.</string>
+    <string name="dual_sim_confirm">Confirm</string>
+    <string name="dual_sim_cancel">Cancel</string>
+    <string name="dual_sim_updated">Request state updated; check Channels for network availability.</string>
+    <string name="dual_sim_failed">Could not start or stop the process; check root, active SIMs and system logs.</string>
 </resources>

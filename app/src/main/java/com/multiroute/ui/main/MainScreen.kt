@@ -28,6 +28,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -68,6 +69,25 @@ fun MainScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val clipboardManager = LocalClipboardManager.current
     val importContext = androidx.compose.ui.platform.LocalContext.current
+    var pendingDualSimMode by remember { mutableStateOf<Int?>(null) }
+    pendingDualSimMode?.let { mode ->
+        AlertDialog(
+            onDismissRequest = { pendingDualSimMode = null },
+            title = { Text(stringResource(com.multiroute.R.string.dual_sim_confirm_title)) },
+            text = { Text(stringResource(when (mode) {
+                1 -> com.multiroute.R.string.dual_sim_confirm_one
+                2 -> com.multiroute.R.string.dual_sim_confirm_two
+                else -> com.multiroute.R.string.dual_sim_confirm_stop
+            })) },
+            confirmButton = { TextButton(onClick = {
+                pendingDualSimMode = null
+                viewModel.setDualSimMode(mode)
+            }) { Text(stringResource(com.multiroute.R.string.dual_sim_confirm)) } },
+            dismissButton = { TextButton(onClick = { pendingDualSimMode = null }) {
+                Text(stringResource(com.multiroute.R.string.dual_sim_cancel))
+            } }
+        )
+    }
     LaunchedEffect(uiState.configAppearanceImported) {
         if (uiState.configAppearanceImported) {
             viewModel.consumeConfigAppearanceImport()
@@ -95,33 +115,58 @@ fun MainScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = {
-                    Column {
-                        val editingName = uiState.scenarioEditId?.let { id ->
-                            uiState.scenarioProfiles.firstOrNull { it.id == id }?.name
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            val editingName = uiState.scenarioEditId?.let { id ->
+                                uiState.scenarioProfiles.firstOrNull { it.id == id }?.name
+                            }
+                            Text(
+                                text = if (uiState.isSelectionMode) {
+                                    editingName?.let {
+                                        stringResource(com.multiroute.R.string.scenario_editing, it)
+                                    } ?: stringResource(com.multiroute.R.string.ui_batch_title)
+                                } else "MultiRoute",
+                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                            )
+                            Text(
+                                text = if (uiState.isSelectionMode) {
+                                    stringResource(com.multiroute.R.string.ui_selected_apps_count, uiState.selectedRuleKeys.size)
+                                } else {
+                                    when (uiState.selectedTab) {
+                                        0 -> stringResource(com.multiroute.R.string.ui_apps_summary, uiState.totalAppsCount, uiState.configuredAppsCount)
+                                        1 -> stringResource(com.multiroute.R.string.ui_online_ifaces, uiState.channels.size)
+                                        else -> stringResource(com.multiroute.R.string.ui_module_routing_state)
+                                    }
+                                },
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
                         }
-                        Text(
-                            text = if (uiState.isSelectionMode) {
-                                editingName?.let {
-                                    stringResource(com.multiroute.R.string.scenario_editing, it)
-                                } ?: stringResource(com.multiroute.R.string.ui_batch_title)
-                            } else "MultiRoute",
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                        )
-                        Text(
-                            text = if (uiState.isSelectionMode) {
-                                stringResource(com.multiroute.R.string.ui_selected_apps_count, uiState.selectedRuleKeys.size)
-                            } else {
-                                when (uiState.selectedTab) {
-                                    0 -> stringResource(com.multiroute.R.string.ui_apps_summary, uiState.totalAppsCount, uiState.configuredAppsCount)
-                                    1 -> stringResource(com.multiroute.R.string.ui_online_ifaces, uiState.channels.size)
-                                    else -> stringResource(com.multiroute.R.string.ui_module_routing_state)
-                                }
-                            },
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.outline
-                        )
+                        Spacer(Modifier.width(10.dp))
+                        for (mode in 1..2) {
+                            Column(
+                                modifier = Modifier.width(47.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    stringResource(if (mode == 1) com.multiroute.R.string.dual_sim_one else com.multiroute.R.string.dual_sim_two),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    maxLines = 1
+                                )
+                                Switch(
+                                    checked = uiState.dualSimMode == mode,
+                                    enabled = !uiState.dualSimBusy,
+                                    onCheckedChange = { pendingDualSimMode = if (it) mode else 0 },
+                                    modifier = Modifier.height(28.dp).scale(0.7f)
+                                )
+                            }
+                        }
                     }
                 },
                 actions = {
@@ -868,6 +913,8 @@ fun ChannelsTab(
             item {
                 com.multiroute.ui.wifi.HotspotUpstreamCard(
                     status = dualWifiStatus,
+                    channels = uiState.channels,
+                    secondaryCellularEnabled = uiState.dualSimMode != 0,
                     onSetUpstream = { viewModel.setHotspotUpstream(it) }
                 )
             }

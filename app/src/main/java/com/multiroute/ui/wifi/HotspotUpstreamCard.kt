@@ -1,6 +1,8 @@
 package com.multiroute.ui.wifi
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +32,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.multiroute.model.NetworkChannel
 import com.multiroute.R
 import com.multiroute.wifi.DualWifiStatus
 import com.multiroute.util.HotspotHookState
@@ -44,12 +47,24 @@ import com.multiroute.util.HotspotUpstreamPolicy
  * 3. 系统实际出口与当前 Hook 加载状态
  * 4. 热点未开启时的预设上行配置
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HotspotUpstreamCard(
     status: DualWifiStatus,
     onSetUpstream: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    channels: List<NetworkChannel> = emptyList(),
+    secondaryCellularEnabled: Boolean = false
 ) {
+    val cellularInterfaces = channels.filter { it.transportType == "cellular" && !it.isHotspot && !it.isVpn }
+        .map { it.interfaceName }.distinct().sorted()
+    val currentTarget = HotspotUpstreamPolicy.normalize(status.hotspotUpstreamTarget)
+    val explicitCellularTarget = HotspotUpstreamPolicy.needsCellular(currentTarget) && currentTarget != "cellular"
+    val showCellularInterfaces = secondaryCellularEnabled || cellularInterfaces.size > 1
+    // Keep an explicitly selected interface visible when it goes offline or the other SIM disappears.
+    val interfaceChoices = ((if (showCellularInterfaces) cellularInterfaces else emptyList()) +
+        (if (explicitCellularTarget) listOf(currentTarget) else emptyList())).distinct()
+
     ElevatedCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -229,11 +244,11 @@ fun HotspotUpstreamCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                Row(
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    val currentTarget = status.hotspotUpstreamTarget.lowercase()
 
                     FilterChip(
                         selected = currentTarget.isEmpty() || currentTarget == "default",
@@ -249,7 +264,7 @@ fun HotspotUpstreamCard(
                         } else null
                     )
 
-                    val isCellularSelected = currentTarget == "cellular" || currentTarget == "mobile" || currentTarget.startsWith("rmnet")
+                    val isCellularSelected = currentTarget == "cellular"
                     FilterChip(
                         selected = isCellularSelected,
                         onClick = { onSetUpstream("cellular") },
@@ -263,6 +278,19 @@ fun HotspotUpstreamCard(
                             { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp)) }
                         } else null
                     )
+
+                    interfaceChoices.forEach { iface ->
+                        val selected = currentTarget == iface
+                        FilterChip(
+                            selected = selected,
+                            enabled = iface in cellularInterfaces,
+                            onClick = { onSetUpstream(iface) },
+                            label = { Text(iface, fontSize = 12.sp) },
+                            leadingIcon = if (selected) {
+                                { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp)) }
+                            } else null
+                        )
+                    }
 
                     val isSecSelected = currentTarget == "wlan1" || currentTarget == "slave_wifi"
                     val canSelectSec = status.secondaryConnected

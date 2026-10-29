@@ -470,4 +470,14 @@
     <string name="dual_wifi_hotspot_upstream_native">原生协议栈转发</string>
     <string name="dual_wifi_hotspot_upstream_hook_warning">未检测到当前版本的上行 Hook 信标，请确认 LSPosed 作用域并重启设备应用更新。</string>
     <string name="dual_wifi_hotspot_upstream_sec_disconnected">副 Wi-Fi (未连接)</string>
+    <string name="dual_sim_one">方案一</string>
+    <string name="dual_sim_two">方案二</string>
+    <string name="dual_sim_confirm_title">副卡网络</string>
+    <string name="dual_sim_confirm_one">启用方案一会请求副卡网络并修改系统双卡状态。可能产生漫游费用或影响网络；停止时尝试恢复原状态。</string>
+    <string name="dual_sim_confirm_two">启用方案二会请求副卡网络，不修改双卡状态属性。可能产生漫游费用或耗电。</string>
+    <string name="dual_sim_confirm_stop">停止副卡请求？方案一会尝试恢复启动前的双卡状态。</string>
+    <string name="dual_sim_confirm">确认</string>
+    <string name="dual_sim_cancel">取消</string>
+    <string name="dual_sim_updated">副卡请求状态已更新；请在通道中检查网络是否可用。</string>
+    <string name="dual_sim_failed">副卡程序启动或停止失败；请检查 Root、活动 SIM 和系统日志。</string>
 </resources>

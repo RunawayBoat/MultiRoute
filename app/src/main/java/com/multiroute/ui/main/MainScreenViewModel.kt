@@ -30,6 +30,7 @@ import com.multiroute.model.ScenarioProfile
 import com.multiroute.model.ScenarioTrigger
 import com.multiroute.util.ScenarioEngine
 import com.multiroute.util.SuHelper
+import com.multiroute.cellular.DualSimController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -38,6 +39,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 data class MainUiState(
+    val dualSimMode: Int = 0,
+    val dualSimBusy: Boolean = false,
     val selectedTab: Int = 0, // 0: 应用分流, 1: 网络通道, 2: 模块与设置
     val isLoadingApps: Boolean = true,
     val isRootGranted: Boolean = false,
@@ -186,6 +189,18 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     init {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(dualSimMode = DualSimController.status())
+            while (true) {
+                delay(10000)
+                if (!_uiState.value.dualSimBusy) {
+                    val actual = runCatching { DualSimController.status() }.getOrDefault(0)
+                    if (actual != _uiState.value.dualSimMode) {
+                        _uiState.value = _uiState.value.copy(dualSimMode = actual)
+                    }
+                }
+            }
+        }
         loadTestServerConfig()
         refreshEnvironment()
         loadInstalledApps()
@@ -193,6 +208,22 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
             val request = NetworkRequest.Builder().build()
             connectivityManager?.registerNetworkCallback(request, networkCallback)
         } catch (_: Exception) {}
+    }
+
+    fun setDualSimMode(mode: Int) {
+        if (_uiState.value.dualSimBusy) return
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(dualSimBusy = true)
+            val ok = runCatching { DualSimController.select(getApplication(), mode) }.getOrDefault(false)
+            val actual = runCatching { DualSimController.status() }.getOrDefault(0)
+            _uiState.value = _uiState.value.copy(
+                dualSimMode = actual,
+                dualSimBusy = false,
+                snackBarMessage = getApplication<Application>().getString(
+                    if (ok) com.multiroute.R.string.dual_sim_updated else com.multiroute.R.string.dual_sim_failed
+                )
+            )
+        }
     }
 
     override fun onCleared() {
